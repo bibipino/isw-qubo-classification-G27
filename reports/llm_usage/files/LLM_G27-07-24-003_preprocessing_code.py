@@ -68,11 +68,7 @@ def preprocess_dataset(
     dataset_path = Path(dataset_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    import os
 
-    print("Current working directory:", os.getcwd())
-    print("Dataset exists:", Path(dataset_path).exists())
-    print("Dataset path:", Path(dataset_path).resolve())
     # ------------------------------------------------------------------
     # Load dataset
     # ------------------------------------------------------------------
@@ -152,17 +148,29 @@ def preprocess_dataset(
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-    import pandas as pd
+    """
+    Example execution using the development dataset.
 
-    # Project root (two levels above src/qubo_project/)
-    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    Repository structure:
 
-    # Run preprocessing
-    training_df, test_df = preprocess_dataset(
-        dataset_path=PROJECT_ROOT / "data" / "trial_dataset_ISW.csv",
-        target_column="target",          # Change if your target column has a different name
+    project_root/
+    ├── data/
+    │   ├── trial_dataset_ISW.csv
+    │   ├── training.csv
+    │   └── test.csv
+    └── src/
+        └── qubo_project/
+            └── preprocessing.py
+    """
+
+    preprocess_dataset(
+        dataset_path="data/trial_dataset_ISW.csv",
+        target_column="target",          # Replace with the actual target column name
         drop_threshold_percent=95.0,
         test_size_percent=20.0,
-        output_dir=PROJECT_ROOT / "data",
+        output_dir="data",
     )
+
+    print("Preprocessing completed successfully.")
+    print("Training dataset saved to: data/training.csv")
+    print("Test dataset saved to: data/test.csv")
