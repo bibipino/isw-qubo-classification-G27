@@ -20,63 +20,54 @@ The implementation is designed to be efficient for very large datasets
 
 from pathlib import Path
 from typing import Tuple
+from time import perf_counter
 
+import argparse
+import os
 import numpy as np
 import pandas as pd
+import json
 
 
-def preprocess_dataset(
-    dataset_path: str | Path,
+def fit_normalize(
+    input_csv: str | Path,
     target_column: str,
-    drop_threshold_percent: float,
-    test_size_percent: float,
-    output_dir: str | Path = "data",
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Preprocess a dataset according to the project specifications.
+    normalized_csv: str,
+    outInitalRes_json: str,
+    minPercValid: float = 0.05,
+    output_data_dir: str | Path = "data",
+    output_json_dir: str | Path = "outputs",
+) -> Tuple[pd.DataFrame, dict]:
 
-    Parameters
-    ----------
-    dataset_path : str or Path
-        Path to the input CSV dataset.
+    output_data_dir = Path(output_data_dir)
+    output_json_dir = Path(output_json_dir)
+    
+    output_data_dir.mkdir(parents=True, exist_ok=True)
+    output_json_dir.mkdir(parents=True, exist_ok=True)
 
-    target_column : str
-        Name of the binary target column.
+    input_path = Path(input_csv)
 
-    drop_threshold_percent : float
-        Threshold percentage used to remove feature columns.
-        A feature is removed if:
-            %missing > threshold
-            OR
-            %zeros > threshold
-
-    test_size_percent : float
-        Percentage of samples assigned to the test set.
-
-    output_dir : str or Path, default="data"
-        Directory where training.csv and test.csv will be saved.
-
-    Returns
-    -------
-    training_df : pandas.DataFrame
-        Training dataset (features + target).
-
-    test_df : pandas.DataFrame
-        Test dataset (features + target).
-    """
-
-    dataset_path = Path(dataset_path)
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    import os
+    if not input_path.exists():
+        fallback_path = output_data_dir / input_path.name
+        if fallback_path.exists():
+            input_path = fallback_path
 
     print("Current working directory:", os.getcwd())
-    print("Dataset exists:", Path(dataset_path).exists())
-    print("Dataset path:", Path(dataset_path).resolve())
+    print("Dataset exists:", input_path.exists())
+    print("Dataset path:", input_path.resolve())
+
+    if not input_path.exists():
+        raise FileNotFoundError(f"Could not locate input CSV file at {input_path.resolve()}")
+
     # ------------------------------------------------------------------
     # Load dataset
     # ------------------------------------------------------------------
-    df = pd.read_csv(dataset_path)
+    start_input_time = perf_counter()
+
+    df = pd.read_csv(input_path)
+
+    end_input_time = perf_counter() - start_input_time
+    start_proc_time = perf_counter()
 
     if target_column not in df.columns:
         raise ValueError(f"Target column '{target_column}' not found.")
@@ -87,40 +78,28 @@ def preprocess_dataset(
     target = df[target_column]
     features = df.drop(columns=[target_column])
 
+    n_features_start = features.shape[1]
     n_samples = len(features)
 
-    # ------------------------------------------------------------------
-    # Remove columns with too many missing values
-    # ------------------------------------------------------------------
-    missing_percentage = features.isna().mean() * 100.0
+    invalid_ratio = (features.isna() | (features == 0)).mean()
+    
+    # Identify features to drop (strictly exceeding the threshold)
+    drop_mask = invalid_ratio < minPercValid
+    dropped_columns = features.columns[drop_mask].tolist()
+    
+    # Keep valid feature columns
+    features = features.loc[:, ~drop_mask]
 
-    # ------------------------------------------------------------------
-    # Remove columns with too many zero values
-    # NaNs are not counted as zeros.
-    # ------------------------------------------------------------------
-    zero_percentage = features.eq(0).mean() * 100.0
-
-    keep_columns = (
-        (missing_percentage <= drop_threshold_percent)
-        & (zero_percentage <= drop_threshold_percent)
-    )
-
-    features = features.loc[:, keep_columns]
+    # Fill any remaining NaNs with 0 before normalization if needed
+    features = features.fillna(0.0)
 
     # ------------------------------------------------------------------
     # Z-score normalization
-    #
-    # Constant columns (std = 0) become all zeros.
     # ------------------------------------------------------------------
     means = features.mean()
-
-    stds = features.std(ddof=0)
-
-    stds = stds.replace(0, 1)
+    stds = features.std(ddof=0).replace(0, 1)
 
     features = (features - means) / stds
-
-    # Replace possible NaNs generated during normalization
     features = features.fillna(0.0)
 
     # ------------------------------------------------------------------
@@ -129,40 +108,149 @@ def preprocess_dataset(
     processed = features.copy()
     processed[target_column] = target.values
 
-    # ------------------------------------------------------------------
-    # Deterministic split (NO SHUFFLING)
-    # ------------------------------------------------------------------
-    test_fraction = test_size_percent / 100.0
+    n_features_end = processed.shape[1]
+    end_proc_time = perf_counter() - start_proc_time
 
-    M = int(n_samples * (1.0 - test_fraction))
+    normalized_csv = normalized_csv if normalized_csv.endswith(".csv") else f"{normalized_csv}.csv"
+    processedPath = output_data_dir / normalized_csv
 
-    training_df = processed.iloc[:M].reset_index(drop=True)
-    test_df = processed.iloc[M:].reset_index(drop=True)
+    processed.to_csv(processedPath, index=False)
 
-    # ------------------------------------------------------------------
-    # Export
-    # ------------------------------------------------------------------
-    training_path = output_dir / "training.csv"
-    test_path = output_dir / "test.csv"
+    jsonOutput = {
+        "n_input_features": n_features_start,
+        "n_kept_features": n_features_end,
+        "dataset_size": n_samples,
+        "dataset_input_time": end_input_time,
+        "dataset_processing_time": end_proc_time,
+        "dropped_feature_names": dropped_columns
+    }
 
-    training_df.to_csv(training_path, index=False)
+    json_path = output_json_dir / outInitalRes_json
+    with open(json_path, "w") as f:
+        json.dump(jsonOutput, f, indent=4)
+
+    return processed, jsonOutput
+
+
+def divide_csvs(
+    normalized_csv: str | Path,
+    train_size_percent: float,
+    output_dir: str | Path = "data",
+    train_csv_name: str = "train.csv",
+    test_csv_name: str = "test.csv"
+):
+    normalized_path = Path(normalized_csv)
+    normalized_path = output_dir/normalized_path
+    
+    print("Current working directory:", os.getcwd())
+    print("Dataset exists:", normalized_path.exists())
+    print("Dataset path:", normalized_path.resolve())
+
+    if not normalized_path.exists():
+        raise FileNotFoundError(
+            f"Could not find '{normalized_csv}'. "
+            f"Please run 'fit_normalize()' first to generate the normalized CSV file."
+        )
+
+    start_input_time = perf_counter()
+    df = pd.read_csv(normalized_path)
+
+    if not (0.0 < train_size_percent < 1.0):
+        raise ValueError("train_size_percent must be a float between 0 and 1.")
+
+    total_rows = len(df)
+    split_index = int(total_rows * train_size_percent)
+
+    train_df = df.iloc[:split_index]
+    test_df = df.iloc[split_index:]
+
+    train_path = output_dir / Path(train_csv_name if train_csv_name.endswith('.csv') else f"{train_csv_name}.csv")
+    test_path = output_dir / Path(test_csv_name if test_csv_name.endswith('.csv') else f"{test_csv_name}.csv")
+
+    train_df.to_csv(train_path, index=False)
     test_df.to_csv(test_path, index=False)
 
-    return training_df, test_df
+    end_input_time = perf_counter() - start_input_time
+
+    print(f"Split complete: {len(train_df)} train rows, {len(test_df)} test rows. Time: {end_input_time:.4f}s")
+
+    return train_path, test_path
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-    import pandas as pd
-
-    # Project root (two levels above src/qubo_project/)
-    PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-    # Run preprocessing
-    training_df, test_df = preprocess_dataset(
-        dataset_path=PROJECT_ROOT / "data" / "trial_dataset_ISW.csv",
-        target_column="target",          # Change if your target column has a different name
-        drop_threshold_percent=95.0,
-        test_size_percent=20.0,
-        output_dir=PROJECT_ROOT / "data",
+    parser = argparse.ArgumentParser(
+        description="Run data preprocessing or CSV division pipeline for QUBO project."
     )
+
+    # Flag to switch to division mode
+    parser.add_argument(
+        "-c", "--divide",
+        action="store_true",
+        help="If set, run divide_csvs() instead of fit_normalize()."
+    )
+
+    # Arguments for fit_normalize (with defaults so no typing is required)
+    parser.add_argument(
+        "--input",
+        type=str,
+        default="trial_dataset_ISW.csv",
+        help="Path or filename of the input raw CSV dataset."
+    )
+    parser.add_argument(
+        "--target",
+        type=str,
+        default="target",
+        help="Name of the target variable column."
+    )
+    parser.add_argument(
+        "--out-data",
+        type=str,
+        default="normalized.csv",
+        help="Filename for the output normalized CSV data."
+    )
+    parser.add_argument(
+        "--out-json",
+        type=str,
+        default="preprocessing_result.json",
+        help="Filename for output execution metrics and statistics."
+    )
+    parser.add_argument(
+        "--min-perc-valid",
+        type=float,
+        default=0.06,
+        help="Minimum required percentage of valid non-zero data for a column."
+    )
+    parser.add_argument(
+        "--out-data-dir",
+        type=str,
+        default="data",
+        help="Directory for data files (defaults to 'data')."
+    )
+    parser.add_argument(
+        "--out-json-dir",
+        type=str,
+        default="outputs",
+        help="Directory for output files (defaults to 'outputs')."
+    )
+
+    args = parser.parse_args()
+
+    if args.divide:
+        divide_csvs(
+            normalized_csv="normalized.csv",
+            train_size_percent=0.3,
+        )
+    else:
+        processed_df, summary_json = fit_normalize(
+            input_csv=args.input,
+            target_column=args.target,
+            normalized_csv=args.out_data,
+            outInitalRes_json=args.out_json,
+            minPercValid=args.min_perc_valid,
+            output_data_dir=args.out_data_dir,
+            output_json_dir=args.out_json_dir
+        )
+
+        print(f"\n[SUCCESS] Preprocessing completed.")
+        print(f"Data saved to: {Path(args.out_json_dir) / args.out_data}")
+        print(f"JSON saved to: {Path(args.out_json_dir) / args.out_json}")
