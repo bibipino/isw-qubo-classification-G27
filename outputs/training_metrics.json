@@ -1,0 +1,12 @@
+{
+  "classifier": "knn",
+  "seed": 4,
+  "training_dataset": "training_reduced.csv",
+  "target_column": "target",
+  "model_path": "model.joblib",
+  "n_samples": 6000,
+  "n_features": 19,
+  "target_1_percentage": 1.27,
+  "dataset_input_time": 0.01,
+  "training_time": 0.02
+}
