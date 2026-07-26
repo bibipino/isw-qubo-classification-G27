@@ -8,7 +8,7 @@
   "n_features": 19,
   "target_1_percentage": 1.27,
   "dataset_input_time": 0.02,
-  "training_time": 0.03,
+  "training_time": 0.13,
   "classifier_metrics": [
     {
       "n_neighbors": 5,

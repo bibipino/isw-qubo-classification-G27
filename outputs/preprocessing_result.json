@@ -2,8 +2,8 @@
     "n_input_features": 146,
     "n_kept_features": 96,
     "dataset_size": 20000,
-    "dataset_input_time": 0.1210696000016469,
-    "dataset_processing_time": 0.04882429999997839,
+    "dataset_input_time": 0.12406610000016371,
+    "dataset_processing_time": 0.04685799999970186,
     "dropped_feature_names": [
         "id",
         "loan_amnt",

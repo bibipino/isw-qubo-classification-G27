@@ -129,7 +129,7 @@
     "percTest": 0.3,
     "training_dataset_size": 6000,
     "test_dataset_size": 14000,
-    "q_matrix_creation_time": 0.8025422999999137,
-    "mean_optimization_time": 0.025618338975545905,
-    "std_dev_optimization_time": 0.0013424432961395315
+    "q_matrix_creation_time": 3.874262499999986,
+    "mean_optimization_time": 0.026056345434299875,
+    "std_dev_optimization_time": 0.0006927234830322646
 }

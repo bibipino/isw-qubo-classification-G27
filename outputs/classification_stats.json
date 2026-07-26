@@ -1,5 +1,5 @@
 {
-  "classifier": "KNeighborsClassifier",
+  "classifier": "knn",
   "n_samples": 14000,
   "target_1_count": 256,
   "target_1_percentage": 1.83,
