@@ -12,142 +12,15 @@ from __future__ import annotations
 import argparse
 import json
 import time
-import joblib
-import pandas as pd
-import numpy as np
-
 from pathlib import Path
 from typing import Any
+
+import joblib
+import pandas as pd
 from lightgbm import LGBMClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from xgboost import XGBClassifier
 
-from sklearn.metrics import (
-    accuracy_score,
-    precision_recall_fscore_support,
-    roc_auc_score,
-    confusion_matrix,
-)
-
-def predict(
-    reduced_Test_csv: str,
-    target_column: str,
-    model_path: str,
-    predictions_csv: str,
-    classif_stats_json: str,
-):
-    outputs = Path("outputs")
-
-    csv_path = outputs / Path(reduced_Test_csv)
-    model_file = outputs / Path(model_path)
-    predictions_file = outputs / Path(predictions_csv)
-    stats_file = outputs / Path(classif_stats_json)
-
-    if not csv_path.exists():
-        raise FileNotFoundError(f"Input CSV not found: {csv_path}")
-
-    if not model_file.exists():
-        raise FileNotFoundError(f"Model file not found: {model_file}")
-
-    df = pd.read_csv(csv_path)
-
-    if target_column not in df.columns:
-        raise ValueError(
-            f"Target column '{target_column}' not found."
-        )
-
-    X = df.drop(columns=[target_column])
-    y = df[target_column]
-
-    model = joblib.load(model_file)
-
-    prediction = model.predict(X)
-
-    if hasattr(model, "predict_proba"):
-        score = model.predict_proba(X)[:, 1]
-
-    elif hasattr(model, "decision_function"):
-        decision = model.decision_function(X)
-
-        decision = np.asarray(decision)
-
-        if decision.ndim > 1:
-            decision = decision[:, -1]
-
-        score = decision
-
-    else:
-        score = np.asarray(prediction, dtype=float)
-
-    predictions = pd.DataFrame(
-        {
-            "row_n": range(len(df)),
-            "target": y.astype(int),
-            "prediction": prediction.astype(int),
-            "score": score.astype(float),
-        }
-    )
-
-    predictions_file.parent.mkdir(parents=True, exist_ok=True)
-    predictions.to_csv(predictions_file, index=False)
-
-    accuracy = accuracy_score(y, prediction)
-
-    precision, recall, f1, support = precision_recall_fscore_support(
-        y,
-        prediction,
-        labels=[0, 1],
-        zero_division=0,
-    )
-
-    try:
-        roc_auc = roc_auc_score(y, score)
-    except Exception:
-        roc_auc = None
-
-    cm = confusion_matrix(y, prediction, labels=[0, 1])
-
-    model_type = type(model).__name__.lower()
-    if "kneighbors" in model_type or "knn" in model_type:
-        classifier_name = "knn"
-    elif "xgb" in model_type:
-        classifier_name = "xgboost"
-    elif "lgbm" in model_type or "lightgbm" in model_type:
-        classifier_name = "lightgbm"
-    else:
-        classifier_name = model_type
-
-    stats = {
-        "classifier": classifier_name,
-        "n_samples": int(len(df)),
-        "target_1_count": int((y == 1).sum()),
-        "target_1_percentage": float(round((y == 1).mean() * 100, 2)),
-        "accuracy": float(accuracy),
-        "class_0": {
-            "precision": float(precision[0]),
-            "recall": float(recall[0]),
-            "f1": float(f1[0]),
-            "support": int(support[0]),
-        },
-        "class_1": {
-            "precision": float(precision[1]),
-            "recall": float(recall[1]),
-            "f1": float(f1[1]),
-            "support": int(support[1]),
-        },
-        "roc_auc": None if roc_auc is None else float(roc_auc),
-        "confusion_matrix": {
-            "labels": [0, 1],
-            "matrix": cm.astype(int).tolist(),
-        },
-    }
-
-    stats_file.parent.mkdir(parents=True, exist_ok=True)
-
-    with stats_file.open("w", encoding="utf-8") as fp:
-        json.dump(stats, fp, indent=2)
-
-    return predictions
 
 def _get_classifier(name: str, seed: int, params: dict[str, Any] | None = None):
     """
@@ -301,49 +174,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Train a binary classification model."
     )
-    
+
     subparsers = parser.add_subparsers(
         dest="command",
         required=True,
-    )
-
-    predict_parser = subparsers.add_parser(
-        "predict",
-        help="Run prediction using a trained classifier.",
-    )
-
-    predict_parser.add_argument(
-        "--input-testset",
-        required=True,
-        dest="reduced_test",
-        type=str,
-    )
-
-    predict_parser.add_argument(
-        "--target",
-        required=True,
-        type=str,
-    )
-
-    predict_parser.add_argument(
-        "--model",
-        required=True,
-        dest="model_path",
-        type=str,
-    )
-
-    predict_parser.add_argument(
-        "--out-predictions",
-        required=True,
-        dest="predictions_csv",
-        type=str,
-    )
-
-    predict_parser.add_argument(
-        "--out-stats",
-        required=True,
-        dest="stats_json",
-        type=str,
     )
 
     train_parser = subparsers.add_parser(
@@ -461,16 +295,7 @@ def main() -> None:
                 **clf_params,
             )
             print("Training completed successfully.")
-        elif args.command == "predict":
-            predict(
-                reduced_Test_csv=args.reduced_test,
-                target_column=args.target,
-                model_path=args.model_path,
-                predictions_csv=args.predictions_csv,
-                classif_stats_json=args.stats_json,
-            )
 
-            print("Prediction completed successfully.")
     except Exception as exc:
         parser.exit(status=1, message=f"Error: {exc}\n")
 
