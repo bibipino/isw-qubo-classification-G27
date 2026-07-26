@@ -133,39 +133,31 @@ def fit_normalize(
 
 
 def divide_csvs(
-    normalized_csv: str | Path,
+    reduced_df: pd.DataFrame,
     train_size_percent: float,
-    output_dir: str | Path = "data",
+    output_dir: str | Path = "outputs",
     train_csv_name: str = "train.csv",
     test_csv_name: str = "test.csv"
 ):
-    normalized_path = Path(normalized_csv)
-    normalized_path = output_dir/normalized_path
-    
-    print("Current working directory:", os.getcwd())
-    print("Dataset exists:", normalized_path.exists())
-    print("Dataset path:", normalized_path.resolve())
-
-    if not normalized_path.exists():
-        raise FileNotFoundError(
-            f"Could not find '{normalized_csv}'. "
-            f"Please run 'fit_normalize()' first to generate the normalized CSV file."
-        )
-
     start_input_time = perf_counter()
-    df = pd.read_csv(normalized_path)
 
     if not (0.0 < train_size_percent < 1.0):
         raise ValueError("train_size_percent must be a float between 0 and 1.")
 
-    total_rows = len(df)
+    total_rows = len(reduced_df)
     split_index = int(total_rows * train_size_percent)
 
-    train_df = df.iloc[:split_index]
-    test_df = df.iloc[split_index:]
+    train_df = reduced_df.iloc[:split_index]
+    test_df = reduced_df.iloc[split_index:]
 
-    train_path = output_dir / Path(train_csv_name if train_csv_name.endswith('.csv') else f"{train_csv_name}.csv")
-    test_path = output_dir / Path(test_csv_name if test_csv_name.endswith('.csv') else f"{test_csv_name}.csv")
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    train_file_name = train_csv_name if train_csv_name.endswith('.csv') else f"{train_csv_name}.csv"
+    test_file_name = test_csv_name if test_csv_name.endswith('.csv') else f"{test_csv_name}.csv"
+
+    train_path = output_path / train_file_name
+    test_path = output_path / test_file_name
 
     train_df.to_csv(train_path, index=False)
     test_df.to_csv(test_path, index=False)
@@ -174,7 +166,7 @@ def divide_csvs(
 
     print(f"Split complete: {len(train_df)} train rows, {len(test_df)} test rows. Time: {end_input_time:.4f}s")
 
-    return train_path, test_path
+    return train_df, test_df
 
 
 if __name__ == "__main__":

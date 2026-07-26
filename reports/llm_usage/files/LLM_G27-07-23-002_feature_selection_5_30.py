@@ -123,48 +123,24 @@ def load_and_correlate(
 
     return load_time, creation_time, df, df_ntc, target, feature_names, rho_m, rho_v
 
-def clean_constant_columns(df_ntc: pd.DataFrame) -> pd.DataFrame:
-    """Drop constant/zero-variance columns to prevent NaN Spearman correlations."""
-    constant_cols = [col for col in df_ntc.columns if df_ntc[col].nunique(dropna=False) <= 1]
-    if constant_cols:
-        df_ntc = df_ntc.drop(columns=constant_cols)
-    return df_ntc
-
 def build_qubo_matrix(
     rho_v: np.ndarray,
     rho_m: np.ndarray,
-    target_k: int,
     alpha: float,
-    gamma: float = 2.0  # Penalty factor for constraint (sum x_i - K)^2
-) -> np.ndarray:
-    """
-    Constructs QUBO matrix for Feature Selection:
-    Minimize: - alpha * sum(rho_v * x_i) 
-              + (1 - alpha) * sum(rho_m_ij * x_i * x_j)
-              + gamma * (sum(x_i) - target_k)^2
-    """
-    n = len(rho_v)
+):
+    rho_v = np.asarray(rho_v, dtype=np.float64)
+    rho_m = np.asarray(rho_m, dtype=np.float64)
+
     beta = 1.0 - alpha
 
-    # 1. Base cost matrix: maximize feature-target, minimize redundancy
-    # Off-diagonal redundancy penalty (+beta * rho_m)
-    Q = beta * rho_m.copy()
-    np.fill_diagonal(Q, 0.0)
+    # Off-diagonal entries.
+    qubo = -beta * rho_m
 
-    # Diagonal relevance benefit (-alpha * rho_v)
-    diag_relevance = -alpha * rho_v
+    # Diagonal entries.
+    diagonal = alpha * rho_v - beta * np.diag(rho_m)
+    np.fill_diagonal(qubo, diagonal)
 
-    # 2. Add Cardinality Constraint: gamma * (sum(x_i) - K)^2
-    # Expanding gamma * (sum(x_i)^2 - 2*K*sum(x_i) + K^2):
-    # - sum(x_i)^2 contributes gamma to ALL entries (x_i * x_j = x_i when i=j)
-    # - -2*K*sum(x_i) contributes -2 * gamma * K to the DIAGONAL entries
-    
-    Q += gamma * np.ones((n, n), dtype=np.float64)
-    
-    # Final diagonal assembly
-    np.fill_diagonal(Q, diag_relevance + gamma * (1.0 - 2.0 * target_k))
-
-    return Q
+    return qubo
 
 def solve_qubo(
     Q: np.ndarray,
@@ -210,10 +186,10 @@ def solve_qubo(
         delta = direction * (Q_sym[i] @ x) - direction * Q[i, i]
 
         # Greedy acceptance: strictly accept non-increasing moves
-        # In solve_qubo local search loop:
-        if delta < -1e-9:  # Accept strict improvements
+        if delta <= 0.0:
             x[i] = 1 - x[i]
             current_cost += delta
+
             if current_cost < best_cost:
                 best_cost = current_cost
                 best_x = x.copy()
@@ -238,7 +214,7 @@ def search_optimal_alpha(
 
     for idx, alpha in enumerate(alpha_steps):
         # 1. Build QUBO matrix for current alpha
-        Q = build_qubo_matrix(rho_v, rho_m, target_k, alpha)
+        Q = build_qubo_matrix(rho_v, rho_m, alpha)
 
         # 2. Solve QUBO using local search
         solution, cost_value, opt_time = solve_qubo(
@@ -262,15 +238,9 @@ def search_optimal_alpha(
         }
         results.append(record)
 
-        # Update best record if this solution is better or strictly meets criteria
         if is_valid:
             if best_record is None or k_diff < best_record["k_diff"]:
                 best_record = record
-
-            # Stop searching alpha values early if exact target length is hit
-            if k_diff == 0:
-                print(f"Target of {target_k} features reached at alpha = {alpha:.4f}. Stopping search early.")
-                break
 
     if best_record is None:
         # Fallback to closest solution if no solution satisfied allowance
@@ -374,8 +344,6 @@ def select_features(
     
     total_end = perf_counter() - total_start
 
-    print(f"TOTAL TIME: {total_end}")
-
     metrics_dict = {
         "n_features": len(feature_names),
         "target_ratio": percSelected,
@@ -402,6 +370,8 @@ def select_features(
         csv_out=output_ottim_csv,
         json_out=output_json
     )
+
+
 
 def main() -> None:
     """CLI entry point."""
