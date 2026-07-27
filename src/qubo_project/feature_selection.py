@@ -6,7 +6,7 @@ constructing a QUBO matrix for feature selection.
 
 from __future__ import annotations
 
-from .preprocessing import divide_csvs
+from preprocessing import divide_csvs
 
 from pathlib import Path
 from time import perf_counter

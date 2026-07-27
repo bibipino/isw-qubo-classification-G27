@@ -41,8 +41,10 @@ def predict(
 ):
     csv_path = Path(reduced_Test_csv)
     model_file = Path(model_path)
-    predictions_file = Path(predictions_csv)
-    stats_file = Path(classif_stats_json)
+
+    # Always target outputs/ using only the file name
+    predictions_file = Path("outputs") / Path(predictions_csv).name
+    stats_file = Path("outputs") / Path(classif_stats_json).name
 
     # Prepend outputs/ only if a relative path was passed without directory specified
     if not model_file.is_absolute() and not model_file.exists():
@@ -62,9 +64,7 @@ def predict(
     df = pd.read_csv(csv_path)
 
     if target_column not in df.columns:
-        raise ValueError(
-            f"Target column '{target_column}' not found."
-        )
+        raise ValueError(f"Target column '{target_column}' not found.")
 
     X = df.drop(columns=[target_column])
     y = df[target_column]
@@ -98,7 +98,6 @@ def predict(
         }
     )
 
-    predictions_file.parent.mkdir(parents=True, exist_ok=True)
     predictions.to_csv(predictions_file, index=False)
 
     accuracy = accuracy_score(y, prediction)
@@ -151,8 +150,6 @@ def predict(
             "matrix": cm.astype(int).tolist(),
         },
     }
-
-    stats_file.parent.mkdir(parents=True, exist_ok=True)
 
     with stats_file.open("w", encoding="utf-8") as fp:
         json.dump(stats, fp, indent=2)
