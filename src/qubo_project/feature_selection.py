@@ -6,7 +6,7 @@ constructing a QUBO matrix for feature selection.
 
 from __future__ import annotations
 
-from preprocessing import divide_csvs
+from .preprocessing import divide_csvs
 
 from pathlib import Path
 from time import perf_counter
@@ -32,9 +32,9 @@ def validate_inputs(
     
     #normalized_csv
     candidate_paths = [
+        Path(normalized_csv),
         Path("data") / normalized_csv,
-        Path(output_ottim_csv) / normalized_csv,
-        Path(output_json) / normalized_csv,
+        Path("outputs") / normalized_csv,
     ]
 
     dataset_path = next((p for p in candidate_paths if p.exists()), None)
@@ -352,7 +352,7 @@ def select_features(
 
     # CALCULATE NUMBER OF FEATURES
 
-    target_k = int(round(len(feature_names) * percSelected))
+    target_k = int(max(1,round(len(feature_names) * percSelected)))
 
     best_record, history_list = search_optimal_alpha(
         rho_v, rho_m, target_k, allowance, alpha_computations, seed

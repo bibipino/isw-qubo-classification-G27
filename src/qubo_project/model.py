@@ -18,7 +18,7 @@ import numpy as np
 
 from pathlib import Path
 from typing import Any
-from lightgbm import LGBMClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from xgboost import XGBClassifier
 
@@ -29,6 +29,9 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 
+# In src/qubo_project/model.py
+from pathlib import Path
+
 def predict(
     reduced_Test_csv: str,
     target_column: str,
@@ -36,18 +39,25 @@ def predict(
     predictions_csv: str,
     classif_stats_json: str,
 ):
-    outputs = Path("outputs")
+    csv_path = Path(reduced_Test_csv)
+    model_file = Path(model_path)
+    predictions_file = Path(predictions_csv)
+    stats_file = Path(classif_stats_json)
 
-    csv_path = outputs / Path(reduced_Test_csv)
-    model_file = outputs / Path(model_path)
-    predictions_file = outputs / Path(predictions_csv)
-    stats_file = outputs / Path(classif_stats_json)
+    # Prepend outputs/ only if a relative path was passed without directory specified
+    if not model_file.is_absolute() and not model_file.exists():
+        model_file = Path("outputs") / model_file
+    if not csv_path.is_absolute() and not csv_path.exists():
+        csv_path = Path("outputs") / csv_path
 
     if not csv_path.exists():
         raise FileNotFoundError(f"Input CSV not found: {csv_path}")
-
     if not model_file.exists():
         raise FileNotFoundError(f"Model file not found: {model_file}")
+
+    # Ensure parent output folder exists before writing
+    predictions_file.parent.mkdir(parents=True, exist_ok=True)
+    stats_file.parent.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(csv_path)
 
@@ -112,8 +122,8 @@ def predict(
         classifier_name = "knn"
     elif "xgb" in model_type:
         classifier_name = "xgboost"
-    elif "lgbm" in model_type or "lightgbm" in model_type:
-        classifier_name = "lightgbm"
+    elif "randomforest" in model_type or "random_forest" in model_type:
+        classifier_name = "random_forest"
     else:
         classifier_name = model_type
 
@@ -152,24 +162,21 @@ def predict(
 def _get_classifier(name: str, seed: int, params: dict[str, Any] | None = None):
     """
     Return the requested classifier instance initialized with default or user-specified parameters.
-
-    Parameters
-    ----------
-    name : str
-        Classifier name (case-insensitive).
-    seed : int
-        Random seed.
-    params : dict[str, Any], optional
-        Additional parameter overrides passed from CLI or function calls.
-
-    Returns
-    -------
-    tuple[str, Any]
     """
     params = params or {}
     key = name.strip().lower()
 
-    if key == "xgboost":
+    if key in ["random_forest", "randomforest"]:
+        model_kwargs = {
+            "random_state": seed,
+            "n_estimators": params.get("n_estimators") or 100,
+            "max_depth": params.get("max_depth"),
+            "n_jobs": params.get("n_jobs") or -1,
+        }
+        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}
+        return "random_forest", RandomForestClassifier(**model_kwargs)
+
+    elif key == "xgboost":
         model_kwargs = {
             "random_state": seed,
             "eval_metric": "logloss",
@@ -178,9 +185,8 @@ def _get_classifier(name: str, seed: int, params: dict[str, Any] | None = None):
             "max_depth": params.get("max_depth") or 6,
             "n_jobs": params.get("n_jobs") or -1,
         }
-        # Filter out keys if explicitly set to None
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}
-        return key, XGBClassifier(**model_kwargs)
+        return "xgboost", XGBClassifier(**model_kwargs)
 
     elif key == "knn":
         model_kwargs = {
@@ -188,21 +194,10 @@ def _get_classifier(name: str, seed: int, params: dict[str, Any] | None = None):
             "n_jobs": params.get("n_jobs") or -1,
             "weights": params.get("weights") or "uniform",
         }
-        return key, KNeighborsClassifier(**model_kwargs)
-
-    elif key == "lightgbm":
-        model_kwargs = {
-            "random_state": seed,
-            "verbose": -1,
-            "n_estimators": params.get("n_estimators") or 100,
-            "learning_rate": params.get("learning_rate") or 0.1,
-            "max_depth": params.get("max_depth") or -1,
-            "n_jobs": params.get("n_jobs") or -1,
-        }
-        return key, LGBMClassifier(**model_kwargs)
+        return "knn", KNeighborsClassifier(**model_kwargs)
 
     else:
-        supported = "xgboost, knn, lightgbm"
+        supported = "random_forest, xgboost, knn"
         raise ValueError(
             f"Unsupported classifier '{name}'. "
             f"Supported classifiers: {supported}"
@@ -218,34 +213,13 @@ def train(
     seed: int = 42,
     **clf_params: Any,
 ):
-    """
-    Train a binary classification model.
-
-    Parameters
-    ----------
-    classifier : str
-        Model name (e.g., xgboost, knn, lightgbm).
-    reducedTrain_csv : str
-        Path to reduced training CSV.
-    target_column : str
-        Target column name.
-    model_path : str
-        Output path for trained model (.joblib).
-    metrics_json : str
-        Output path for metrics JSON.
-    seed : int, default=42
-        Random seed.
-    **clf_params : Any
-        Optional hyperparameter overrides for the chosen classifier.
-    """
-    csv_path = "outputs"/Path(reducedTrain_csv)
-    model_file = "outputs"/Path(model_path)
-    metrics_file = "outputs"/Path(metrics_json)
+    csv_path = Path("outputs") / Path(reducedTrain_csv)
+    model_file = Path("outputs") / Path(model_path)
+    metrics_file = Path("outputs") / Path(metrics_json)
 
     if not csv_path.exists():
         raise FileNotFoundError(f"Input CSV not found: {csv_path}")
 
-    # Load dataset
     start = time.perf_counter()
     df = pd.read_csv(csv_path)
     dataset_input_time = time.perf_counter() - start
@@ -264,16 +238,16 @@ def train(
 
     classifier_name, model = _get_classifier(classifier, seed, clf_params)
 
-    # Train model
     start = time.perf_counter()
     model.fit(X, y)
     training_time = time.perf_counter() - start
 
-    # Save model
     model_file.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, model_file)
 
-    # Save metrics JSON matching specification section 11.3
+    # Filter out None parameters from metric report
+    active_params = {k: v for k, v in clf_params.items() if v is not None}
+
     metrics = {
         "classifier": classifier_name,
         "seed": seed,
@@ -286,7 +260,7 @@ def train(
         "dataset_input_time": round(dataset_input_time, 2),
         "training_time": round(training_time, 2),
         "classifier_metrics": [
-            clf_params
+            active_params
         ]
     }
 
@@ -351,12 +325,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Train a classifier.",
     )
 
-    # Mandatory CLI flags
     train_parser.add_argument(
         "--classifier",
         required=True,
         type=str,
-        help="Classifier to use (xgboost, knn, lightgbm).",
+        help="Classifier to use (random_forest, xgboost, knn).",
     )
 
     train_parser.add_argument(
@@ -397,7 +370,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Random seed.",
     )
 
-    # Optional Classifier-Specific Arguments
     train_parser.add_argument(
         "--n-neighbors",
         type=int,
@@ -416,21 +388,21 @@ def _build_parser() -> argparse.ArgumentParser:
         "--n-estimators",
         type=int,
         default=None,
-        help="Number of boosting trees (XGBoost/LightGBM).",
+        help="Number of trees (RandomForest/XGBoost).",
     )
 
     train_parser.add_argument(
         "--learning-rate",
         type=float,
         default=None,
-        help="Learning rate (XGBoost/LightGBM).",
+        help="Learning rate (XGBoost).",
     )
 
     train_parser.add_argument(
         "--max-depth",
         type=int,
         default=None,
-        help="Maximum tree depth (XGBoost/LightGBM).",
+        help="Maximum tree depth (RandomForest/XGBoost).",
     )
 
     return parser
@@ -442,7 +414,6 @@ def main() -> None:
 
     try:
         if args.command == "train":
-            # Extract optional classifier parameter overrides
             clf_params = {
                 "n_neighbors": args.n_neighbors,
                 "n_jobs": args.n_jobs,
