@@ -6,7 +6,7 @@ students:
     name: "Maderazo Jerome"
 main_llm_used: "ChatGPT"
 paid_subscription_used: false
-second_llm_used: ""
+second_llm_used: "Gemini"
 third_llm_used: ""
-notes: ""
-project_finished: "false"    # Mettere "true" se consegnato
+notes: "Using Gemini was easier because you don't have to change chat after 2 messages or using too many tokens in one conversation also the limit for file uploading is not one so in one prompt the AI can read more than one file making the second the better one to use comfortably."
+project_finished: "true"    # Mettere "true" se consegnato

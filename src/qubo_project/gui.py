@@ -399,7 +399,7 @@ elif page == "Feature Selection":
             )
 
             perc_test = st.slider(
-                "Test Percentage",
+                "Train Percentage",
                 0.00,
                 1.00,
                 0.30,

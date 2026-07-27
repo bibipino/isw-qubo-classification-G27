@@ -36,18 +36,18 @@ students:
 
 team_work:
   work_distribution:
-    design_percent: null
-    preprocessing_percent: null
-    qubo_feature_selection_percent: null
-    classification_percent: null
-    testing_percent: null
-    gui_percent: null
-    documentation_percent: null
+    design_percent: "50 - 50"
+    preprocessing_percent: "20 - 80"
+    qubo_feature_selection_percent: "80 - 20"
+    classification_percent: "70 - 30"
+    testing_percent: "60 - 40"
+    gui_percent: "40 - 60"
+    documentation_percent: "50 - 50"
   collaboration_mode:
     # valori suggeriti: "pair_programming", "divisione_per_moduli", "mista"
-    type: null
-    notes: null
-    remote_collaboration_perc: 0   # Percentuale di lavoro in call (0-100)
+    type: "mista"
+    notes: "We divided labor based on when someone could work and we tried to collaborate as much as possible but we also worked alone in certain modules"
+    remote_collaboration_perc: 20   # Percentuale di lavoro in call (0-100)
   estimated_total_hours:
     student_1_hours: null
     student_2_hours: null
@@ -56,134 +56,149 @@ team_work:
 initial_context:
   prior_experience:
     # valori da usare: "none", "basic", "intermediate", "advanced"
-    python: null
-    pandas_numpy: null
-    scikit_learn: null
-    machine_learning: null
-    classification: null
-    feature_selection: null
-    optimization: null
-    QUBO: null
-    git_github: null
+    python: "intermediate"
+    pandas_numpy: "none"
+    scikit_learn: "none"
+    machine_learning: "basic"
+    classification: "none"
+    feature_selection: "basic"
+    optimization: "basic"
+    QUBO: "none"
+    git_github: "intermediate"
   initial_confidence:
     # scala 1-5: 1 = per nulla sicuri, 5 = molto sicuri
-    python_project_development: null
-    qubo_formulation: null
-    machine_learning: null
-    debugging: null
-    validating_llm_outputs: null
+    python_project_development: 3
+    qubo_formulation: 2
+    machine_learning: 3
+    debugging: 4
+    validating_llm_outputs: 4
 
 design_choices:
-  correlation_computation: null
+  correlation_computation: "Absolute Spearman rank correlations were used to evaluate feature-target influence and feature-feature independence."
   QUBO_optimization_algorithm:
-    algorithm_name: null
-    library_used: null
-    reason_for_choice: null
+    algorithm_name: "Randomized Local Search (Hill Climbing)"
+    library_used: "NumPy"
+    reason_for_choice: "A vectorized NumPy implementation is cleaner, faster, and easier to maintain without external solver dependencies. It evaluates single bit flips efficiently and only accepts moves that strictly lower or maintain the cost."
   classification_algorithm:
-    algorithm_name: null
-    library_used: null
-    reason_for_choice: null
-  gui_development: null
+    algorithm_name: "Random Forest, XGBoost, and K-Nearest Neighbors (KNN)"
+    library_used: "scikit-learn and xgboost"
+    reason_for_choice: "Random Forest was chosen to satisfy the mandatory project requirement, while XGBoost and KNN were retained to complete the required set of three classifiers."
+  gui_development: "Streamlit was selected because it is the fastest technology for the assignment, produces a professional interface, is easy to demonstrate, and can integrate with the backend without changing the architecture."
   problems_encountered:
-    - problem: null
-      solution: null
+    - problem: "There were a lot of little problems to pretty much every section, with runtime errors, syntax errors and also a big error were we didn't comply to point 12/13 in a suficent way"
+      solution: "The smaller ones were fixed with AI or manual fixes when they were spotted but the big one made so we had to start the project from scratch and redo it."
   notes:
+    "The project didn't reach a big point before reset and since the reports were not done for those 2 days we decided to completely start like those days didn't occur since there were no traces of them"
 
 llm_usage_summary:
   # Non inserire prompt o risposte complete: saranno raccolti separatamente.
   llms_used:    # Inserire un record per ogni LLM usato
-    - name: null
-      version: null
-      paid_subscription: null
+    - name: "ChatGPT"
+      version: "GPT-5"
+      paid_subscription: false
       usage_level_0_to_3:   # valori da 0 (non usato) a 3 (usatissimo)     
-        value: null   
+        value: 2
+    - name: "Gemini"
+      version: "Gemini 3.1 Pro"
+      paid_subscription: false
+      usage_level_0_to_3:   # valori da 0 (non usato) a 3 (usatissimo)     
+        value: 3   
   phases_where_llm_was_used:
     requirements_understanding:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 1
+      usefulness_1_to_5: 4
+      notes: "Small doubts more or less but in some parts it was used and worked pretty well"
     preprocessing:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 3
+      usefulness_1_to_5: 5
+      notes: "Essential for the result obtained"
     qubo_formulation:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 3
+      usefulness_1_to_5: 5
+      notes: "Essential for the result obtained"
     optimizer_selection:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 3
+      usefulness_1_to_5: 5
+      notes: "Essential for the result obtained"
     classifier_selection:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 3
+      usefulness_1_to_5: 5
+      notes: "Essential for the result obtained"
     debugging:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 2
+      usefulness_1_to_5: 4
+      notes: "Identified bugs pretty well for what we were used to and was really useful"
     testing:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 3
+      usefulness_1_to_5: 5
+      notes: "Essential for the result obtained"
     documentation:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 3
+      usefulness_1_to_5: 5
+      notes: "Essential for the result obtained"
     gui:
-      usage_level_0_to_3: null
-      usefulness_1_to_5: null
-      notes: null
+      usage_level_0_to_3: 3
+      usefulness_1_to_5: 5
+      notes: "Essential for the result obtained"
   estimated_llm_contribution:
-    percent_code_generated_or_suggested_by_llm: null
-    percent_code_accepted_without_major_changes: null
-    percent_documentation_generated_or_suggested_by_llm: null
+    percent_code_generated_or_suggested_by_llm: 80
+    percent_code_accepted_without_major_changes: 50
+    percent_documentation_generated_or_suggested_by_llm: "for LOGS completely manual so 0 for README and comments mostly AI so 95"
   human_verification:
     # descrivere come il gruppo ha controllato gli output dell'LLM. (yes/partially/no)
     methods_used:
-      - code_execution: null
-      - automated_tests: null
-      - critical_reading: null
-      - comparison_with_other_llm: null
-    notes: null
+      - code_execution: "yes"
+      - automated_tests: "yes"
+      - critical_reading: "yes"
+      - comparison_with_other_llm: "partially"
+    notes: "We executed and read the code critically before execution, we cross checked only for some functions we were not sure about in certain parts and are all documented"
   llm_misleading_outputs:
-    encountered: null  # (yes/partially/no)
-    examples_count: null   # number of cases
+    encountered: "partially"  # (yes/partially/no)
+    examples_count: "We don't have a number but it's in the 10s"   # number of cases
     categories:     # rispondere con: yes/partially/no
-      wrong_python_code: null  
-      wrong_library_usage: null
-      wrong_qubo_formulation: null
-      wrong_ml_methodology: null
-      hallucinated_api_or_function: null
-      other: null      # indicare quale/quali
-    impact_on_project: null   # valori da 0 (nessuno) a 3 (fortissimo)     
+      wrong_python_code: "partially"  
+      wrong_library_usage: "no"
+      wrong_qubo_formulation: "partially"
+      wrong_ml_methodology: "partially"
+      hallucinated_api_or_function: "partially"
+      other: "Wrong command, invented features that were not requested and hallucinated stuff in general"      # indicare quale/quali
+    impact_on_project: 1   # valori da 0 (nessuno) a 3 (fortissimo)     
   llm_overall_assessment:  
-    productivity_improvement_1_to_5: null
-    learning_support_1_to_5: null
-    risk_of_overreliance_1_to_5: null
-    trust_in_llm_outputs_1_to_5: null
-    would_use_again: null   # (yes/maybe/no)
-    notes: null
-  most_useful_project_activity: null
-  most_difficult_project_activity: null
+    productivity_improvement_1_to_5: 4
+    learning_support_1_to_5: 4
+    risk_of_overreliance_1_to_5: 3
+    trust_in_llm_outputs_1_to_5: 3
+    would_use_again: "yes"   # (yes/maybe/no)
+    notes: "We somewhat trusted the LLM in fields we didn't know about but we checked the code and the results produced so we feel pretty confident in the end about how it was used"
+  most_useful_project_activity: "Feature selection and Training"
+  most_difficult_project_activity: "Feature selection"
   main_lessons_learned:   # descrivere con una frase per ogni lezione appresa
-    - null
+    - "We experimented with better LLM prompting"
+    - "We understood the principles and the features of how a prediction algorithm works"
+    - "We gained another teamwork experience"
+    - "We learnt how to operate a GUI via python"
+    - "We learnt how to use the new libraries"
+    - "doing the project step by step with the AI works way better than asking for all the code at once."
+    - "streamlit is very easy to use for making a quick GUI."
+    - "file paths are annoying and caused most of our early bugs."
   main_problems:
-    - problem: null
-      severity_1_to_5: null
-      how_resolved: null
+    - problem: "No really big problems were encountered other than what I described earlier about not reading specifics properly"
+      severity_1_to_5: 4
+      how_resolved: "starting again"
+    - problem: "Small errors by AI"
+      severity_1_to_5: 2
+      how_resolved: "Cross checked/read the code"
 
 final_results:   # descrivere con una frase per ogni elemento che ritenete di citare
   what_worked_well:
-    - null
+    - "The AI helped a lot in fields we didn't know and gave pretty good responses overall"
   what_did_not_work_well:
-    - null
-  main_benefit_of_using_llm: null
-  main_problem_of_using_llm: null
+    - "Time management of the project"
+  main_benefit_of_using_llm: "It generates mainly right code very very fast"
+  main_problem_of_using_llm: "You have to test pretty intensively and read all the code over and over to find the errors and giving it to another AI usually generates more errors and hallucinations"
   surprising_findings:
-    - null
+    - "It's pretty easy to create a basic model trained with a dataset with a specific goal"
   limitations_of_the_solution:
-    - null
+    - "The solutions look pretty good but the results are limited by the small database even though 20000 is not really small but a larger dataset would have generated a better result"
   threats_to_validity_from_team_perspective:
-    - null
-
+    - "Per risolvere il problema QUBO abbiamo usato un algoritmo greedy (hill climbing), quindi c'è il rischio di trovare un ottimo locale invece della soluzione migliore in assoluto."
