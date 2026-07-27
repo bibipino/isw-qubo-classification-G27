@@ -149,7 +149,7 @@ elif page == "Dataset":
                     col2.metric("Columns", len(df.columns))
 
                     st.subheader("Dataset Preview")
-                    st.dataframe(df.head(20), use_container_width=True)
+                    st.dataframe(df.head(20), width='stretch')
 
                     # Download button for CSV
                     csv_bytes = df.to_csv(index=False).encode("utf-8")
@@ -316,7 +316,7 @@ elif page == "Preprocessing":
                 df = pd.read_csv(csv_path)
 
                 # Display full dataframe (entirety)
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(df, width='stretch')
 
                 # Download button for CSV
                 csv_bytes = df.to_csv(index=False).encode("utf-8")
@@ -517,7 +517,7 @@ elif page == "Feature Selection":
                 st.subheader("Reduced Training Dataset (CSV)")
 
                 train_df = pd.read_csv(train_path)
-                st.dataframe(train_df, use_container_width=True)
+                st.dataframe(train_df, width='stretch')
 
                 st.download_button(
                     label=f"📥 Download {train_name}",
@@ -535,7 +535,7 @@ elif page == "Feature Selection":
                 st.subheader("Reduced Testing Dataset (CSV)")
 
                 test_df = pd.read_csv(test_path)
-                st.dataframe(test_df, use_container_width=True)
+                st.dataframe(test_df, width='stretch')
 
                 st.download_button(
                     label=f"📥 Download {test_name}",
@@ -553,7 +553,7 @@ elif page == "Feature Selection":
                 st.subheader("Optimization History (CSV)")
 
                 optim_df = pd.read_csv(optim_path)
-                st.dataframe(optim_df, use_container_width=True)
+                st.dataframe(optim_df, width='stretch')
 
                 st.download_button(
                     label=f"📥 Download {optim_name}",
@@ -912,7 +912,7 @@ elif page == "Prediction":
                     columns=["Predicted 0", "Predicted 1"],
                     index=["Actual 0", "Actual 1"],
                 )
-                st.dataframe(matrix_df, use_container_width=True)
+                st.dataframe(matrix_df, width='stretch')
 
             st.markdown("##### Complete Stats JSON")
             st.json(stats)
@@ -934,7 +934,7 @@ elif page == "Prediction":
             st.subheader("Complete Predictions Dataset (CSV)")
 
             predictions_df = pd.read_csv(prediction_file)
-            st.dataframe(predictions_df, use_container_width=True)
+            st.dataframe(predictions_df, width='stretch')
 
             st.download_button(
                 label=f"📥 Download {preds_name}",
